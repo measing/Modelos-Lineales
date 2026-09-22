@@ -10,6 +10,7 @@ from pygments.lexers import PythonLexer, SLexer
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "_site"
 OUT.mkdir(exist_ok=True)
+shutil.copytree(ROOT / "web" / "assets", OUT / "assets", dirs_exist_ok=True)
 for name in ("reports", "downloads"):
     (OUT / name).mkdir(exist_ok=True)
 for name in ("index.html", "style.css", "app.js"):
