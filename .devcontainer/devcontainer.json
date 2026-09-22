@@ -10,6 +10,7 @@
       "settings": {
         "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
         "r.rterm.linux": "/usr/bin/R",
+        "r.lsp.enabled": false,
         "r.bracketedPaste": true
       }
     }
