@@ -1,0 +1,31 @@
+name: Verificar R y Python
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  laboratorio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construir el entorno de Codespaces
+        run: docker build -t modelos-lineales -f .devcontainer/Dockerfile .
+      - name: Ejecutar ambos analisis y generar el PDF
+        run: >-
+          docker run --rm
+          -v "$GITHUB_WORKSPACE:/workspaces/modelos-lineales"
+          -w /workspaces/modelos-lineales
+          modelos-lineales
+          bash -c 'bash scripts/preparar.sh && bash scripts/ejecutar.sh pdf'
+      - name: Guardar informes
+        uses: actions/upload-artifact@v4
+        with:
+          name: informes-laboratorio
+          path: resultados/
+          if-no-files-found: error

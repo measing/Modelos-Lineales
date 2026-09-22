@@ -1,0 +1,17 @@
+{
+  "name": "Modelos Lineales - R y Python",
+  "build": { "dockerfile": "Dockerfile", "context": ".." },
+  "remoteUser": "vscode",
+  "postCreateCommand": "bash scripts/preparar.sh",
+  "waitFor": "postCreateCommand",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "ms-toolsai.jupyter", "REditorSupport.r"],
+      "settings": {
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+        "r.rterm.linux": "/usr/bin/R",
+        "r.bracketedPaste": true
+      }
+    }
+  }
+}

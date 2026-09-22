@@ -1,0 +1,9 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "Ejecutar todo (R y Python)", "type": "process", "command": "bash", "args": ["scripts/ejecutar.sh"], "options": { "cwd": "${workspaceFolder}" }, "group": { "kind": "build", "isDefault": true }, "problemMatcher": [] },
+    { "label": "Ejecutar Python", "type": "process", "command": "bash", "args": ["scripts/ejecutar.sh", "python"], "options": { "cwd": "${workspaceFolder}" }, "problemMatcher": [] },
+    { "label": "Generar informe R (HTML)", "type": "process", "command": "bash", "args": ["scripts/ejecutar.sh", "r"], "options": { "cwd": "${workspaceFolder}" }, "problemMatcher": [] },
+    { "label": "Generar informe R (PDF)", "type": "process", "command": "bash", "args": ["scripts/ejecutar.sh", "pdf"], "options": { "cwd": "${workspaceFolder}" }, "problemMatcher": [] }
+  ]
+}

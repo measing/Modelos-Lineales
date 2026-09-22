@@ -1,0 +1,11 @@
+.venv/
+.venv-validacion/
+__pycache__/
+.ipynb_checkpoints/
+.Rhistory
+.RData
+.Rproj.user/
+resultados/
+*.knit.md
+*.utf8.md
+*_files/

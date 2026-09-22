@@ -1,0 +1,1362 @@
+---
+title: "Laboratorio 1 "
+author: "jorge correa - Alexis Bravo"
+date: "2026-09-23"
+lang: es
+toc-title: "Índice"
+output:
+  pdf_document:
+    latex_engine: xelatex
+    toc: true
+    toc_depth: 2
+    number_sections: false
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# Librerias
+
+library(psych)
+library(ggplot2)
+library(knitr)
+library(reshape2)
+```
+
+# Ejercicio 1. Publicidad y ventas
+
+## Pregunta 1(a). Análisis exploratorio de datos
+
+### Caso de estudio
+
+Se desea estudiar la influencia de la inversión publicitaria realizada a través de distintos medios sobre las ventas de un producto.
+
+Se dispone de información correspondiente a 200 regiones. Para cada región se registra el ingreso por ventas, expresado en millones, y el presupuesto destinado a publicidad en televisión, radio y periódicos, también expresado en millones.
+
+* tv: Presupuesto destinado a publicidad en televisión, en millones.
+* radio: Presupuesto destinado a publicidad en radio, en millones.
+* periodico: Presupuesto destinado a publicidad en periódico, en millones.
+* ventas: Ingreso por ventas del producto, en millones.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE,}
+ventas <- read.csv("ventas.txt", sep = "\t", header = TRUE)
+
+```
+
+### Datos y resultados del EDA
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+tabla_resumen <- data.frame(
+  Variable = names(ventas),
+  Minimo = sapply(ventas, min),
+  Q1 = sapply(ventas, function(x) quantile(x, 0.25)),
+  Mediana = sapply(ventas, median),
+  Media = sapply(ventas, mean),
+  Q3 = sapply(ventas, function(x) quantile(x, 0.75)),
+  Maximo = sapply(ventas, max),
+  row.names = NULL
+)
+
+tabla_resumen[, -1] <- round(tabla_resumen[, -1], 2)
+
+kable(
+  tabla_resumen,
+  caption = "Resumen descriptivo de las variables"
+)
+
+estructura <- data.frame(
+  Variable = names(ventas),
+  Tipo = sapply(ventas, class),
+  Observaciones = sapply(ventas, length),
+  row.names = NULL
+)
+
+kable(
+  estructura,
+  caption = "Estructura de la base de datos"
+)
+
+faltantes <- data.frame(
+  Variable = names(ventas),
+  Valores_Faltantes = colSums(is.na(ventas)),
+  row.names = NULL
+)
+
+kable(
+  faltantes,
+  caption = ""
+)
+```
+
+La base de datos ventas contiene 180 observaciones, en lugar de las 200 indicadas en el enunciado, y está compuesta por cuatro variables: tv, que representa el presupuesto destinado a publicidad en televisión; radio, correspondiente al presupuesto en publicidad radial; periodico, asociado al gasto en publicidad en periódico; y ventas, que corresponde al ingreso por ventas del producto. Todas las variables se encuentran expresadas en millones.
+
+Al revisar la presencia de datos faltantes, se observó que ninguna de las cuatro variables presenta valores NA. Por esta razón, no fue necesario realizar procedimientos de imputación ni eliminar observaciones antes de continuar con el análisis.
+
+En la variable tv, el presupuesto mínimo registrado es de 0.70 millones y el máximo alcanza 296.40 millones. El primer cuartil es de 76.05 millones, lo que indica que el 25% de las observaciones presenta una inversión inferior a ese valor. La mediana es de 154.05 millones y la media alcanza 149.12 millones. Por su parte, el tercer cuartil es de 219.93 millones, por lo que el 75% de las observaciones presenta una inversión inferior a dicho monto.
+
+Para la variable radio, el presupuesto mínimo es de 0 millones y el máximo corresponde a 49.60 millones. El 25% de las observaciones presenta una inversión inferior a 9.975 millones, mientras que la mediana se sitúa en 23.05 millones. La inversión promedio es de 23.488 millones y el tercer cuartil alcanza 36.65 millones.
+
+En el caso de periodico, el presupuesto mínimo registrado es de 0.30 millones y el máximo es de 114 millones. El primer cuartil corresponde a 12.28 millones, la mediana a 26.05 millones y la media a 30.81 millones. El tercer cuartil alcanza 45.12 millones, por lo que el 75% de las observaciones presenta una inversión inferior a ese valor.
+
+Finalmente, la variable ventas presenta un valor mínimo de 1.60 millones y un máximo de 27 millones. El primer cuartil es de 10.60 millones, la mediana de 13.05 millones y la media de 14.14 millones. El tercer cuartil alcanza 17.70 millones, lo que indica que el 75% de las regiones registra ventas inferiores a dicho valor.
+
+En conjunto, los estadísticos descriptivos muestran diferencias en los niveles de inversión publicitaria y en los ingresos por ventas entre las regiones. Estas variaciones permiten continuar con el análisis exploratorio para evaluar si existe una asociación entre las ventas y los distintos medios publicitarios.
+
+
+\newpage
+
+La variable ventas es la variable dependiente (respuesta), ya que es la que queremos explicar o predecir. Las variables tv, radio y periodico son las variables explicativas, pues corresponden a los presupuestos publicitarios que podrían estar asociadas con las ventas.
+
+A continuación, se presentan gráficos exploratorios para observar la asociación entre las ventas y cada uno de los medios publicitarios.
+
+El primer gráfico corresponde a un diagrama de dispersión entre tv y ventas, permitiendo observar una tendencia positiva: a mayor inversión en tv, mayores ventas.
+
+El segundo gráfico muestra la relación entre radio y ventas, donde también se observa una tendencia positiva, aunque con mayor dispersión que en el caso de tv.
+
+El tercer gráfico muestra la relación entre periodico y ventas, donde la tendencia positiva es más débil y los puntos presentan una dispersión considerablemente mayor.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# Gráfico (1): TV vs ventas
+ggplot(ventas, aes(tv, ventas)) +
+  geom_point(color = "#1F77B4", size = 2.3, alpha = 0.8) +
+  geom_smooth(method = "lm", se = FALSE, color = "#FF7F0E", linewidth = 1) +
+  annotate("text", x = max(ventas$tv)*0.95, y = min(ventas$ventas)+2,
+           label = "(1)", color = "gray30", size = 5, fontface = "bold") +
+  labs(title = "Relación entre inversión en TV y ventas",
+       x = "Inversión en TV",
+       y = "Ventas") +
+  theme_minimal(base_size = 13)
+
+# Gráfico (2): radio vs ventas
+ggplot(ventas, aes(radio, ventas)) +
+  geom_point(color = "#1F77B4", size = 2.3, alpha = 0.85) +
+  geom_smooth(method = "lm", se = FALSE, color = "#FF7F0E", linewidth = 1) +
+  annotate("text", x = max(ventas$radio)*0.95, y = min(ventas$ventas)+2,
+           label = "(2)", color = "gray30", size = 5, fontface = "bold") +
+  labs(title = "Relación entre inversión en radio y ventas",
+       x = "Inversión en radio",
+       y = "Ventas") +
+  theme_minimal(base_size = 13)
+
+# Gráfico (3): periodico vs ventas
+ggplot(ventas, aes(periodico, ventas)) +
+  geom_point(color = "#1F77B4", size = 2.3, alpha = 0.8) +
+  geom_smooth(method = "lm", se = FALSE, color = "#FF7F0E", linewidth = 1) +
+  annotate("text", x = max(ventas$periodico)*0.95, y = min(ventas$ventas)+2,
+           label = "(3)", color = "gray30", size = 5, fontface = "bold") +
+  labs(title = "Relación entre inversión en periódico y ventas",
+       x = "Inversión en periódico",
+       y = "Ventas") +
+  theme_minimal(base_size = 13)
+
+# 4) Matriz de correlaciones
+matriz_cor <- cor(ventas, use = "complete.obs")
+
+# Preparar datos para el gráfico
+cor_melt <- melt(matriz_cor)
+
+# Gráfico de la matriz
+ggplot(cor_melt, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(value, 2)), color = "black", size = 4) +
+  scale_fill_gradient2(
+    low = "#2166AC",
+    mid = "white",
+    high = "#B2182B",
+    midpoint = 0,
+    limits = c(-1, 1)
+  ) +
+  theme_minimal() +
+  labs(
+    title = "Matriz de correlaciones",
+    x = "",
+    y = "",
+    fill = "Cor"
+  )
+
+
+```
+
+### Interpretación del EDA
+
+En el gráfico (1) se observa una tendencia positiva clara entre la inversión en TV y las ventas: a mayor presupuesto destinado a TV, mayores son las ventas registradas. Los puntos se ajustan de forma bastante cercana a la recta de tendencia, especialmente en los presupuestos bajos y medios, lo que indica una relación fuerte y consistente entre ambas variables. Visualmente no se observan puntos extremadamente alejados del patrón general.
+
+En el gráfico (2) también se observa una tendencia positiva entre la inversión en radio y las ventas, aunque con mayor dispersión de los puntos alrededor de la recta que en el caso de TV, sobre todo en los presupuestos más altos, donde las ventas varían bastante entre regiones que invierten montos similares. Esto sugiere que radio presenta una asociación positiva con las ventas, pero de forma menos consistente que TV.
+
+En el gráfico (3) la tendencia positiva es mucho más débil: la recta es casi plana y los puntos se dispersan ampliamente alrededor de ella en todo el rango de inversión, sin un patrón claro que indique que a mayor gasto en periódico se obtienen mayores ventas. Esto indica que periódico es el medio con menor asociación directa con las ventas de los tres analizados.
+
+En conjunto, los tres gráficos muestran que TV es el medio con mayor asociación con las ventas, seguido de radio con una relación moderada, mientras que periódico presenta la relación más débil y dispersa de los tres.
+
+La matriz de correlaciones confirma lo observado en los gráficos de dispersión anteriores. La correlación más alta con ventas es la de tv (0.76), lo que refuerza la idea de que es el medio publicitario con mayor asociación sobre las ventas. Le sigue radio (0.58), con una asociación moderada, y finalmente periodico (0.21), que presenta la correlación más débil de las tres, consistente con la nube de puntos dispersa observada en su gráfico.
+
+Por otro lado, al observar las correlaciones entre los propios predictores, se aprecia que tv prácticamente no se relaciona ni con radio ni con periodico (0.03 en ambos casos), lo que indica que no se observa una asociación lineal importante entre la inversión en televisión y la inversión en los otros dos medios. En cambio, radio y periodico muestran una correlación moderada (0.34). Este resultado indica una asociación lineal moderada entre ambos presupuestos publicitarios, pero no permite concluir que formen parte de una estrategia conjunta ni establecer una relación causal.
+
+Este patrón es relevante para el modelo de regresión múltiple: como periodico está correlacionado con radio pero tiene poca relación directa con ventas, la correlación entre radio y periódico indica que ambas variables presentan cierta asociación, por lo que al incluirlas simultáneamente en el modelo, el efecto estimado de cada una puede diferir respecto de su asociación marginal con las ventas, y periódico podría no realizar un aporte propio una vez controladas las demás variables. 
+
+## Pregunta 1(b). Modelo de regresión lineal múltiple
+
+
+A continuación, ajustaremos un modelo de regresión lineal múltiple para analizar la asociación entre las ventas y la inversión realizada en televisión, radio y periódico. Buscamos evaluar el efecto de cada medio publicitario manteniendo constantes los demás predictores y determinar si el modelo, en conjunto, presenta una relación estadísticamente significativa con las ventas.
+
+
+$$
+\text{ventas} = \beta_0 + \beta_1(\text{tv}) + \beta_2(\text{radio}) + \beta_3(\text{periodico}) + \varepsilon
+$$
+
+donde se asume que
+
+$$
+\varepsilon_i \overset{iid}{\sim} N(0, \sigma^2).
+$$
+
+Para evaluar si existe relación entre las ventas y el conjunto de predictores publicitarios, se contrasta:
+
+Hipótesis nula (H₀):
+
+$$
+H_0: \beta_1 = \beta_2 = \beta_3 = 0
+$$
+Ninguno de los predictores presenta asociación lineal con las ventas.
+
+Hipótesis alternativa (H₁):
+
+$$
+H_1: \text{al menos un } \beta_j \neq 0, \quad j = 1, 2, 3
+$$
+Al menos uno de los predictores presenta asociación lineal con las ventas.
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+modelo_ventas <- lm(ventas ~ tv + radio + periodico, data = ventas)
+s <- summary(modelo_ventas)
+
+kable(round(s$coefficients, 4))
+
+kable(data.frame(
+  R2 = round(s$r.squared, 4),
+  R2_ajustado = round(s$adj.r.squared, 4),
+  Error_estandar = round(s$sigma, 4),
+  F = round(s$fstatistic[1], 4),
+  p_valor = format.pval(pf(s$fstatistic[1], s$fstatistic[2], s$fstatistic[3], lower.tail = FALSE), digits = 4)
+), row.names = FALSE)
+```
+
+### Interpretación del modelo
+
+El modelo ajustado quedó de la siguiente forma:
+
+$$
+{\text{ventas}} = 2.8196 + 0.0456(\text{tv}) + 0.1936(\text{radio}) - 0.0007(\text{periodico})
+$$
+
+La variable tv presenta un coeficiente estimado de 0.0456, con un p-valor inferior a $2\times10^{-16}$. Esto indica que, manteniendo constantes las inversiones en radio y periódico, un aumento de un millón en publicidad televisiva se asocia con un incremento promedio de 0.0456 millones en las ventas. De forma similar, radio presenta un coeficiente de 0.1936 y un p-valor inferior a $2\times10^{-16}$, por lo que un aumento de un millón en publicidad radial se asocia con un incremento promedio de 0.1936 millones en las ventas, controlando por las demás variables.
+
+En cambio, periodico presenta un coeficiente estimado de -0.0007 y un p-valor de 0.905. Por lo tanto, una vez consideradas las inversiones en TV y radio, no existe evidencia estadística suficiente para establecer una asociación entre la inversión en periódico y las ventas.
+
+Este resultado es consistente con la matriz de correlaciones, donde periodico presenta una correlación de 0.34 con radio y de 0.21 con ventas. Esto sugiere que parte de su asociación marginal con las ventas puede estar relacionada con su vínculo con la inversión en radio. Al incorporar las tres variables de forma simultánea, periodico no muestra un aporte significativo al modelo.
+
+En términos globales, el modelo obtuvo un estadístico $F=494.7$, con 3 y 176 grados de libertad, y un p-valor inferior a $2.2\times10^{-16}$. Con este resultado se rechaza $H_0$, concluyendo que al menos uno de los predictores publicitarios presenta una asociación estadísticamente significativa con las ventas.
+
+Además, el modelo alcanza un $R^2=0.894$ y un $R^2$ ajustado de 0.8922, por lo que explica aproximadamente el 89.4% de la variabilidad observada en las ventas. El error estándar residual es de 1.702 millones, valor que representa la magnitud aproximada de las diferencias entre las ventas observadas y las estimadas por el modelo.
+
+En conjunto, tv y radio mantienen una asociación significativa con las ventas al controlar por las demás variables, mientras que periodico no presenta un aporte estadísticamente significativo. Con estos resultados, el modelo puede utilizarse para estimar la respuesta media esperada para distintas combinaciones de inversión publicitaria.
+
+### Comparación entre R y Python
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+comparacion_1b <- data.frame(
+  Resultado = c(
+    "Intercepto",
+    "Coeficiente de TV",
+    "Coeficiente de radio",
+    "Coeficiente de periódico",
+    "Estadístico F global",
+    "p-valor del contraste F",
+    "R2",
+    "R2 ajustado"
+  ),
+  R = c(
+    "2.8196",
+    "0.0456",
+    "0.1936",
+    "-0.0007",
+    "494.7293",
+    "1.71e-85",
+    "0.8940",
+    "0.8922"
+  ),
+  Python = c(
+    "2.8196",
+    "0.0456",
+    "0.1936",
+    "-0.0007",
+    "494.7293",
+    "1.71e-85",
+    "0.8940",
+    "0.8922"
+  )
+)
+
+kable(
+  comparacion_1b,
+  caption = "Comparación del modelo de ventas entre R y Python",
+  align = c("l", "c", "c")
+)
+```
+
+### Interpretación
+
+El ajuste del modelo de ventas en R y Python produjo un intercepto de 2.8196 y coeficientes de 0.0456 para televisión, 0.1936 para radio y -0.0007 para periódico. El contraste global registró \(F=494.7293\) y un p-valor de \(1.71\times10^{-85}\), resultado que permite rechazar la hipótesis nula de ausencia conjunta de asociación. En ambos programas, el coeficiente de determinación alcanzó \(R^2=0.8940\) y el coeficiente ajustado \(R^2_{aj}=0.8922\). Los resultados obtenidos mantienen la equivalencia entre las estimaciones y la interpretación del modelo. Las variaciones en las salidas corresponden al formato y al redondeo utilizado por cada programa.
+
+
+## Pregunta 1(c). Intervalo de confianza para la respuesta media
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+nuevo_c <- data.frame(tv = 147.05, radio = 23.3, periodico = 31)
+kable(round(as.data.frame(predict(modelo_ventas, newdata = nuevo_c, interval = "confidence", level = 0.95)), 4))
+```
+
+### Interpretación
+
+Para una región con una inversión de 147.05 millones en TV, 23.3 millones en radio y 31 millones en periódico, el modelo estima una venta media de 14.00941 millones. A partir de esta estimación, el intervalo de confianza del 95% para la respuesta media se encuentra entre 13.75892 y 14.25991 millones.
+
+El intervalo cuantifica la incertidumbre en la estimación del promedio de ventas para regiones con la combinación de inversión publicitaria especificada. Sus límites corresponden al valor medio esperado y no a las ventas de una región individual. La amplitud de 0.5 millones indica el margen asociado a la estimación de la respuesta media.
+
+### Comparación entre R y Python
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+comparacion_1c <- data.frame(
+  Resultado = c(
+    "Respuesta media estimada",
+    "Límite inferior del IC 95%",
+    "Límite superior del IC 95%"
+  ),
+  R = c(
+    "14.0094",
+    "13.7589",
+    "14.2599"
+  ),
+  Python = c(
+    "14.0094",
+    "13.7589",
+    "14.2599"
+  )
+)
+
+kable(
+  comparacion_1c,
+  caption = "Comparación del intervalo de confianza entre R y Python",
+  align = c("l", "c", "c")
+)
+```
+
+Para la combinación de inversión establecida, el análisis en R y Python produjo una respuesta media estimada de 14.0094 millones y un intervalo de confianza del 95 % entre 13.7589 y 14.2599 millones. La estimación puntual y los límites obtenidos mantienen la equivalencia entre ambos procedimientos. Las variaciones de presentación corresponden al redondeo utilizado por cada programa.
+
+## Pregunta 1(d). Predicción para una nueva sucursal
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+nuevo_d <- data.frame(tv = 160, radio = 26.7, periodico = 35.1)
+kable(round(as.data.frame(predict(modelo_ventas, newdata = nuevo_d, interval = "prediction", level = 0.95)), 4))
+```
+
+Para una nueva sucursal con un presupuesto asignado de TV = 160 millones, Radio = 26.7 millones y Periódico = 35.1 millones en publicidad, el modelo entrega un valor ajustado (fit) de 15.255 millones de pesos, es decir que esa es la predicción puntual de ventas para una nueva sucursal con esa combinación de presupuestos. El intervalo de predicción del 95% para las ventas de una nueva sucursal se encuentra entre 11.886 y 18.624 millones de pesos.
+
+Este intervalo resulta notablemente más amplio que el de confianza obtenido en el inciso anterior (con un ancho de alrededor de 6.74 millones frente a solo 0.5 millones en la respuesta media), debido a que no describe el promedio de ventas de un grupo de regiones, sino la variabilidad intrínseca y la incertidumbre asociada a una sucursal específica.
+
+### Comparación entre R y Python
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+comparacion_1d <- data.frame(
+  Resultado = c(
+    "Predicción puntual",
+    "Límite inferior del IP 95%",
+    "Límite superior del IP 95%"
+  ),
+  R = c(
+    "15.2548",
+    "11.8856",
+    "18.6240"
+  ),
+  Python = c(
+    "15.2548",
+    "11.8856",
+    "18.6240"
+  )
+)
+
+kable(
+  comparacion_1d,
+  caption = "Comparación del intervalo de predicción entre R y Python",
+  align = c("l", "c", "c")
+)
+```
+
+Para la nueva sucursal, el análisis en R y Python produjo una predicción puntual de 15.2548 millones y un intervalo de predicción del 95 % entre 11.8856 y 18.6240 millones. La predicción y sus límites mantienen la equivalencia entre ambas implementaciones para los niveles de inversión especificados.
+
+## Pregunta 1(e). Diferencia entre estimación media y predicción individual
+
+La cantidad $E(Y \mid X = x_0)$ es un parámetro poblacional fijo:
+
+$$
+E(Y \mid X = x_0) = \beta_0 + \beta_1 x_{0,1} + \beta_2 x_{0,2} + \beta_3 x_{0,3}
+$$
+
+Representa la venta media de todas las hipotéticas regiones que invirtieran exactamente $x_0$ en publicidad. En cambio, $Y_{\text{nuevo}} \mid X = x_0$ es una variable aleatoria, la venta de una región particular:
+
+$$
+Y_{\text{nuevo}} \mid X = x_0 = \beta_0 + \beta_1 x_{0,1} + \beta_2 x_{0,2} + \beta_3 x_{0,3} + \varepsilon
+$$
+
+que además del componente medio incluye su propio término de error $\varepsilon$.
+
+Ambos intervalos comparten la misma incertidumbre sobre la estimación de $\hat{\beta}$ (el llamado error reducible), reflejada en el término $\hat{\sigma}^2 \, x_0^\top (X^\top X)^{-1} x_0$. Sin embargo, el intervalo de predicción debe sumar además la varianza del error irreducible $\sigma^2$, propia de una observación individual no observada.
+
+Formalmente, comparando los errores estándar:
+
+$$
+SE_{\text{confianza}} = \hat{\sigma}\sqrt{x_0^\top (X^\top X)^{-1} x_0}
+$$
+
+$$
+SE_{\text{predicción}} = \hat{\sigma}\sqrt{1 + x_0^\top (X^\top X)^{-1} x_0}
+$$
+
+El término adicional \(1\) que aparece dentro de la raíz en la fórmula del intervalo de predicción representa la variabilidad propia de una nueva observación, asociada al término de error \(\varepsilon\). Esta componente se suma a la incertidumbre existente al estimar la respuesta media.
+
+Por esta razón, el intervalo de predicción es más amplio que el intervalo de confianza para la respuesta media. Incluso si los parámetros \(\beta_0, \beta_1, \beta_2\) y \(\beta_3\) fueran conocidos con precisión, la venta de una región particular seguiría presentando variabilidad asociada a factores no explicados por el modelo. En consecuencia, esta fuente de incertidumbre no puede eliminarse únicamente aumentando el tamaño de la muestra o mejorando la estimación de los coeficientes.
+
+
+# Ejercicio 2. Biomasa y características del suelo
+
+### Caso de estudio
+
+El propósito de este estudio es identificar e investigar las características del suelo que influyen sobre la biomasa ($Y$) de una especie de pasto. Para ello, se registró información de diversas muestras de suelo evaluando cinco variables fisicoquímicas: 
+
+biomasa ($Y$): Biomasa de la especie de pasto obtenida en la muestra.  
+
+salinidad ($X_1$): Porcentaje de salinidad en el suelo (%).  
+
+pH ($X_2$): Nivel de acidez o alcalinidad del suelo.  
+
+potasio ($X_3$): Concentración de potasio disponible (ppm).  
+
+sodio ($X_4$): Concentración de sodio disponible (ppm).  
+
+zinc ($X_5$): Concentración de zinc disponible (ppm).  
+
+El objetivo central de este análisis es evaluar las propiedades del suelo que explican la biomasa e ilustrar de forma práctica por qué ajustar múltiples regresiones lineales simples de manera independiente no equivale a ajustar un modelo de regresión lineal múltiple que controle simultáneamente el efecto de las demás covariables.  
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+datos <- read.csv("datos.txt", sep = "\t", header = TRUE)
+```
+
+
+## Pregunta 2(a). Análisis exploratorio de datos
+
+### Datos y resultados del EDA
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+biomasa <- datos$biomasa
+salinidad <- datos$salinidad
+pH <- datos$pH
+potasio <- datos$K
+sodio <- datos$Na
+zinc <- datos$Zn
+
+tabla_resumen <- data.frame(
+  Variable = names(datos),
+  Minimo = sapply(datos, min),
+  Q1 = sapply(datos, function(x) quantile(x, 0.25)),
+  Mediana = sapply(datos, median),
+  Media = sapply(datos, mean),
+  Q3 = sapply(datos, function(x) quantile(x, 0.75)),
+  Maximo = sapply(datos, max),
+  row.names = NULL
+)
+
+tabla_resumen[, -1] <- round(tabla_resumen[, -1], 2)
+
+kable(
+  tabla_resumen,
+  caption = "Resumen descriptivo de las variables"
+)
+
+estructura <- data.frame(
+  Variable = names(datos),
+  Tipo = sapply(datos, class),
+  Observaciones = sapply(datos, length),
+  row.names = NULL
+)
+
+kable(
+  estructura,
+  caption = "Estructura de la base de datos"
+)
+
+faltantes <- data.frame(
+  Variable = names(datos),
+  Valores_Faltantes = colSums(is.na(datos)),
+  row.names = NULL
+)
+
+kable(
+  faltantes,
+  caption = ""
+)
+```
+La base de datos llamada datos contiene 40 observaciones y 6 variables cuantitativas: biomasa (variable respuesta $Y$), salinidad ($X_1$), pH ($X_2$), K ($X_3$, potasio), Na ($X_4$, sodio) y Zn ($X_5$, zinc).
+
+Al examinar la presencia de valores faltantes, se constató la ausencia de valores faltantes, con 0 valores NA en todas las variables. Por lo que no fue necesario aplicar ningún procedimiento de imputación ni eliminación de observaciones. 
+
+En la variable respuesta biomasa ($Y$), encontramos que el mínimo es de 236.0, es decir que el rendimiento biológico más bajo registrado es de 236.0, en el primer cuartil el 25% de las muestras produce menos de 408.0, la mitad de las muestras produce menos de 846.0, el promedio general es de 995.3, en el tercer cuartil el 75% de las muestras produce menos de 1575.0 y con un máximo de 2272.0 siendo esta la muestra de suelo con mayor producción de biomasa.
+
+En cuanto a la variable salinidad ($X_1$), encontramos que el mínimo es de 24.0, en el primer cuartil el 25% de los suelos presenta valores menores a 27.0, la mitad de los suelos presenta menos de 30.0, el promedio general es de 30.3, en el tercer cuartil el 75% es menor a 33.0 y con un máximo de 38.0.
+
+En la variable pH ($X_2$), encontramos que el mínimo es de 3.200, es decir que el suelo más ácido presenta un pH de 3.200, en el primer cuartil el 25% de los suelos presenta un pH menor a 3.425, la mitad de los suelos tiene un pH menor a 4.500, el promedio general es de 4.609, en el tercer cuartil el 75% es menor a 5.237 y con un máximo de 7.450 siendo este el suelo más alcalino registrado.
+
+En la variable K ($X_3$, potasio), encontramos que el mínimo es de 350.7, en el primer cuartil el 25% de los suelos tiene menos de 532.3 ppm, la mitad de los suelos registra menos de 747.0 ppm, el promedio general de potasio es de 791.8 ppm, en el tercer cuartil el 75% es menor a 963.0 ppm y con un máximo de 1441.7 ppm.
+
+En la variable Na ($X_4$, sodio), encontramos que el mínimo es de 7886 ppm, en el primer cuartil el 25% de los suelos registra menos de 11615 ppm, la mitad de los suelos presenta menos de 14742 ppm, el promedio general es de 16592 ppm, en el tercer cuartil el 75% es menor a 20546 ppm y con un máximo de 35185 ppm siendo esta la mayor concentración de sodio.
+
+Finalmente, en la variable Zn ($X_5$, zinc), encontramos que el mínimo es de 0.2105 ppm, en el primer cuartil el 25% de los suelos registra menos de 14.7856 ppm, la mitad de los suelos tiene menos de 19.6206 ppm, el promedio general es de 18.0771 ppm, en el tercer cuartil el 75% es menor a 22.4173 ppm y con un máximo de 31.2865 ppm.
+
+En resumen, los datos confirman una amplia variabilidad en las condiciones fisicoquímicas del suelo y en la biomasa registrada, los estadísticos descriptivos muestran una amplia variabilidad en las características fisicoquímicas del suelo y en la biomasa, por lo que resulta pertinente estudiar posteriormente la asociación de pH y potasio con la respuesta.
+
+\newpage
+
+La variable biomasa es la variable dependiente (respuesta), ya que es la que queremos explicar o predecir. Las variables salinidad, pH, potasio, sodio y zinc son las variables explicativas, pues corresponden a las características del suelo que podrían influir sobre la producción de biomasa.
+
+A continuación, se presentan gráficos exploratorios para observar la asociación entre la biomasa y el pH, y entre la biomasa y el potasio, que son las dos variables centrales del análisis de este ejercicio.
+
+El primer gráfico corresponde a un diagrama de dispersión entre pH y biomasa, permitiendo observar una tendencia positiva clara: a mayor pH del suelo, mayor biomasa producida.
+
+El segundo gráfico muestra la relación entre potasio y biomasa, donde no se observa un patrón definido, con los puntos dispersos en todo el rango sin una tendencia clara.
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE,}
+# Gráfico (4): pH vs biomasa
+ggplot(datos, aes(pH, biomasa)) +
+  geom_point(color = "#1F77B4", size = 2.3, alpha = 0.8) +
+  geom_smooth(method = "lm", se = FALSE, color = "#FF7F0E", linewidth = 1) +
+  annotate("text", x = max(datos$pH)*0.95, y = min(datos$biomasa)+80,
+           label = "(4)", color = "gray30", size = 5, fontface = "bold") +
+  labs(title = "Relación entre el pH del suelo y la biomasa",
+       x = "pH",
+       y = "Biomasa") +
+  theme_minimal(base_size = 13)
+
+# Gráfico (5): potasio vs biomasa
+ggplot(datos, aes(K, biomasa)) +
+  geom_point(color = "#1F77B4", size = 2.3, alpha = 0.85) +
+  geom_smooth(method = "lm", se = FALSE, color = "#FF7F0E", linewidth = 1) +
+  annotate("text", x = max(datos$K)*0.95, y = min(datos$biomasa)+80,
+           label = "(5)", color = "gray30", size = 5, fontface = "bold") +
+  labs(title = "Relación entre el potasio del suelo y la biomasa",
+       x = "Potasio (ppm)",
+       y = "Biomasa") +
+  theme_minimal(base_size = 13)
+
+# Matriz de correlaciones
+matriz_cor <- cor(datos)
+
+library(reshape2)
+cor_melt <- melt(matriz_cor)
+
+ggplot(cor_melt, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(value, 2)), color = "black", size = 4) +
+  scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B",
+                        midpoint = 0, limit = c(-1, 1)) +
+  theme_minimal(base_size = 13) +
+  labs(title = "Matriz de correlaciones", x = "", y = "", fill = "Cor") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### Interpretación del EDA
+
+En el gráfico (4) se observa una tendencia positiva bastante clara entre el pH del suelo y la biomasa: a medida que aumenta el pH, la biomasa producida también tiende a aumentar, y los puntos se ajustan de forma razonable a la recta de tendencia en casi todo el rango, aunque con algo de dispersión en los valores intermedios. Esto sugiere que el pH es una variable con una asociación importante sobre la biomasa.
+
+En el gráfico (5) la situación es distinta: la recta de tendencia entre potasio y biomasa es levemente decreciente, pero los puntos están ampliamente dispersos en todo el rango sin seguir un patrón claro, es decir que no pareciera existir una relación lineal fuerte entre estas dos variables por sí solas.
+
+La matriz de correlaciones confirma lo observado en ambos gráficos. La correlación entre biomasa y pH es de 0.77, la más alta de todas las que presenta la biomasa con los predictores, lo que refuerza la idea de que el pH es la variable más asociada a la producción de biomasa. En cambio, la correlación entre biomasa y potasio es de apenas -0.12, prácticamente nula, consistente con la nube de puntos dispersa que se observó en el gráfico (5). También destaca la correlación entre biomasa y zinc (-0.58), que es negativa y moderadamente fuerte, y la correlación entre biomasa y sodio (-0.21), más débil. La correlación entre biomasa y salinidad es igual de baja que la de potasio (-0.12).
+
+Por otro lado, al mirar las correlaciones entre los propios predictores, se observa que potasio y sodio están fuertemente correlacionados entre sí (0.77), mientras que pH y zinc también muestran una correlación negativa considerable (-0.71). En cambio, pH y potasio, que son las dos variables centrales de este ejercicio, prácticamente no están correlacionadas entre sí (0.06), lo que es relevante para lo que se va a hacer más adelante: como ambas variables aportan información bastante independiente una de la otra, no se esperaría que el efecto de potasio cambie demasiado al controlar por pH, a diferencia de lo que ocurriría si estuvieran fuertemente correlacionadas.
+
+
+## Pregunta 2(b). Regresión lineal simple de biomasa sobre pH
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE,}
+modelo_biomasa_pH <- lm(biomasa ~ pH, data = datos)
+s <- summary(modelo_biomasa_pH)
+
+kable(round(s$coefficients, 4))
+
+kable(data.frame(
+  R2 = round(s$r.squared, 4),
+  R2_ajustado = round(s$adj.r.squared, 4),
+  Error_estandar = round(s$sigma, 4),
+  F = round(s$fstatistic[1], 4),
+  p_valor = format.pval(pf(s$fstatistic[1], s$fstatistic[2], s$fstatistic[3], lower.tail = FALSE), digits = 4)
+), row.names = FALSE)
+```
+### Interpretación
+
+El modelo ajustado quedó de la siguiente forma:
+
+$$
+\widehat{\text{biomasa}} = -867.36 + 404.16(\text{pH})
+$$
+
+Encontramos que el coeficiente de pH es de 404.16, positivo y altamente significativo (p = 5.88e-09), es decir que por cada unidad adicional de pH la biomasa aumenta en promedio 404.16 unidades. El intercepto es de -867.36 (p = 0.00179), que también resulta significativo, aunque no tiene una interpretación práctica real ya que ningún suelo de la muestra tiene pH cercano a 0.
+
+El modelo logra explicar un 59.44% de la variabilidad de la biomasa (R² = 0.5944, R² ajustado = 0.5837), lo que es un ajuste moderado, y el estadístico F fue de 55.68 con 1 y 38 grados de libertad, con un p-valor de 5.879e-09, por lo que se rechaza H0 y se concluye que sí existe una relación significativa entre el pH y la biomasa cuando se considera de forma aislada.
+
+Este coeficiente de 404.16 va a ser el punto de comparación para más adelante, cuando revisemos si esta asociación entre pH y biomasa cambia al incorporar potasio en un modelo múltiple.
+
+
+## Pregunta 2(c). Obtención y análisis de residuos
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# Residuos de biomasa explicada por pH
+eY <- resid(modelo_biomasa_pH)
+
+# Regresión de potasio sobre pH, y sus residuos
+modelo_K_pH <- lm(K ~ pH, data = datos)
+eX3 <- resid(modelo_K_pH)
+
+# Gráfico de residuos eY vs eX3
+residuos_df <- data.frame(eY = eY, eX3 = eX3)
+
+ggplot(residuos_df, aes(eX3, eY)) +
+  geom_point(color = "#1F77B4", size = 2.3, alpha = 0.8) +
+  geom_smooth(method = "lm", se = FALSE, color = "#FF7F0E", linewidth = 1) +
+  annotate("text", x = max(eX3)*0.9, y = min(eY)+80,
+           label = "(6)", color = "gray30", size = 5, fontface = "bold") +
+  labs(title = "Residuos de biomasa~pH vs residuos de potasio~pH",
+       x = expression(e[X3]~"(potasio no explicado por pH)"),
+       y = expression(e[Y]~"(biomasa no explicada por pH)")) +
+  theme_minimal(base_size = 13)
+```
+
+### Interpretación de los residuos
+
+El eje \(e_{X3}\) representa la parte de la variación del potasio que no es explicada linealmente por el pH. De manera análoga, \(e_Y\) representa la parte de la variación de la biomasa que no es explicada linealmente por el pH. Por lo tanto, la relación entre ambos residuos permite estudiar la asociación parcial entre potasio y biomasa una vez controlado el efecto lineal del pH.
+
+En el gráfico (6) se observa una tendencia levemente negativa entre ambos residuos, bastante similar en forma a la que ya se había visto en el gráfico (5) entre potasio y biomasa sin controlar por nada. Esto es consistente con lo que se había anticipado a partir de la matriz de correlaciones, ya que como pH y potasio prácticamente no están correlacionados entre sí (0.06), quitarle a potasio lo que explica pH casi no cambia su relación con la biomasa, por lo que el patrón se mantiene parecido al original.
+
+Esta pendiente que se observa en el gráfico (6) es justamente la que se va a calcular de forma explícita en el siguiente apartado, ajustando una regresión de $e_Y$ sobre $e_{X3}$.
+
+\newpage
+
+## Pregunta 2(d). Regresión entre los residuos
+
+Ahora se ajusta un modelo simple entre los dos residuos obtenidos, eY y eX3, para obtener de forma explícita el valor de la pendiente gamma, que se va a comparar más adelante con el coeficiente de potasio en el modelo múltiple.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE,}
+modelo_residuos <- lm(eY ~ eX3, data = residuos_df)
+s <- summary(modelo_residuos)
+
+kable(round(s$coefficients, 4))
+
+kable(data.frame(
+  R2 = round(s$r.squared, 4),
+  R2_ajustado = round(s$adj.r.squared, 4),
+  Error_estandar = round(s$sigma, 4),
+  F = round(s$fstatistic[1], 4),
+  p_valor = format.pval(pf(s$fstatistic[1], s$fstatistic[2], s$fstatistic[3], lower.tail = FALSE), digits = 4)
+), row.names = FALSE)
+```
+
+### Interpretación
+
+El modelo de residuos entrega una pendiente estimada de $\hat{\gamma} = -0.3679$
+(error estándar 0.2165, t = -1.699, p = 0.0974). El intercepto resulta
+prácticamente cero (-1.849e-14), lo cual no es un hallazgo sino una
+consecuencia algebraica de regresionar residuos de dos modelos que ya
+incluían intercepto: por construcción, ambos conjuntos de residuos tienen
+media cero, por lo que la recta que los relaciona pasa por el origen.
+
+La pendiente estimada es \(\hat\gamma=-0.3679\), con un p-valor de 0.0974. Por lo tanto, al nivel de significancia habitual del 5% no existe evidencia suficiente para concluir que el potasio presenta una asociación lineal con la biomasa una vez controlado el efecto del pH.
+
+Este valor de $\hat{\gamma} = -0.3679$ es el que se comparará a continuación
+con el coeficiente de K en el modelo de regresión múltiple, para verificar
+numéricamente que ambos procedimientos son equivalentes.
+
+
+## Pregunta 2(e). Regresión múltiple y equivalencia numérica
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE,}
+modelo_biomasa_pH_K <- lm(biomasa ~ pH + K, data = datos)
+s <- summary(modelo_biomasa_pH_K)
+
+kable(round(s$coefficients, 4))
+
+kable(data.frame(
+  R2 = round(s$r.squared, 4),
+  R2_ajustado = round(s$adj.r.squared, 4),
+  Error_estandar = round(s$sigma, 4),
+  F = round(s$fstatistic[1], 4),
+  p_valor = format.pval(pf(s$fstatistic[1], s$fstatistic[2], s$fstatistic[3], lower.tail = FALSE), digits = 4)
+), row.names = FALSE)
+```
+
+### Interpretación
+
+El modelo ajustado es:
+
+$$
+\widehat{\text{biomasa}} = -600.02 + 409.35(\text{pH}) - 0.37(\text{K})
+$$
+
+En el modelo múltiple, el coeficiente de K es $\hat{\beta}_3=-0.3679$, valor que coincide con $\hat{\gamma}=-0.3679$ obtenido mediante la regresión de residuos. Esta igualdad confirma la equivalencia entre ambos procedimientos para estimar el efecto parcial del potasio sobre la biomasa, controlando por el pH.
+
+Por su parte, el coeficiente del pH aumenta de 404.16 en el modelo simple a 409.35 en el modelo múltiple. Este cambio es reducido, lo que concuerda con la baja correlación entre pH y K ($r=0.06$). Al compartir poca información, la incorporación del potasio modifica escasamente el efecto estimado del pH.
+
+El potasio continúa sin presentar significancia estadística, con un p-valor de 0.102 en el modelo múltiple y de 0.0974 en la regresión de residuos. Aunque estos valores difieren levemente, la pendiente estimada es idéntica en ambos casos. Además, el $R^2$ aumenta de 0.5944 a 0.6229, lo que representa una mejora acotada en la capacidad explicativa del modelo al incorporar K.
+
+### Comparación entre R y Python
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+comparacion_2e <- data.frame(
+  Resultado = c(
+    "Intercepto del modelo múltiple",
+    "Coeficiente de pH",
+    "Coeficiente de K",
+    "Pendiente de la regresión de residuos",
+    "Diferencia entre beta3 y gamma"
+  ),
+  R = c(
+    "-600.0193",
+    "409.3526",
+    "-0.367854",
+    "-0.367854",
+    "0.000000"
+  ),
+  Python = c(
+    "-600.0193",
+    "409.3526",
+    "-0.367854",
+    "-0.367854",
+    "0.000000"
+  )
+)
+
+kable(
+  comparacion_2e,
+  caption = "Comparación de la regresión múltiple entre R y Python",
+  align = c("l", "c", "c")
+)
+```
+
+El análisis en R y Python produjo un intercepto de \(-600.0193\), un coeficiente de \(409.3526\) para el pH y un coeficiente de \(-0.367854\) para el potasio. La regresión de residuos registró una pendiente de \(\hat{\gamma}=-0.367854\). La diferencia entre \(\hat{\beta}_3\) y \(\hat{\gamma}\) fue cercana a cero, lo que verifica la equivalencia entre la regresión de residuos y la regresión múltiple para estimar el coeficiente parcial del potasio al controlar por pH. Las variaciones en cifras posteriores corresponden al redondeo utilizado en cada programa.
+
+## Pregunta 2(f). Efecto marginal y efecto parcial de potasio
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+modelo_biomasa_K <- lm(biomasa ~ K, data = datos)
+s <- summary(modelo_biomasa_K)
+
+kable(round(s$coefficients, 4))
+
+kable(data.frame(
+  R2 = round(s$r.squared, 4),
+  R2_ajustado = round(s$adj.r.squared, 4),
+  Error_estandar = round(s$sigma, 4),
+  F = round(s$fstatistic[1], 4),
+  p_valor = format.pval(pf(s$fstatistic[1], s$fstatistic[2], s$fstatistic[3], lower.tail = FALSE), digits = 4)
+), row.names = FALSE)
+```
+
+### Interpretación
+
+Al ajustar el modelo biomasa ~ K sin controlar por pH, el coeficiente estimado de K es -0.2688, con un p-valor de 0.446, por lo que no resulta estadísticamente significativo. Este valor difiere del -0.3679 obtenido en el modelo múltiple, donde se incorpora también el pH.
+
+La diferencia se debe a que ambos coeficientes representan asociaciones distintas. En la regresión simple, el coeficiente de K refleja su relación directa con la biomasa sin considerar otras variables. En cambio, en el modelo múltiple, $\hat{\beta}_3$ representa el efecto parcial del potasio sobre la biomasa manteniendo constante el pH.
+
+En este caso, la diferencia entre ambos coeficientes es pequeña debido a la baja correlación entre pH y K ($r=0.058$). Por esta razón, controlar por pH modifica poco la estimación asociada al potasio. Si ambas variables presentaran una correlación mayor, la diferencia entre el coeficiente obtenido en la regresión simple y el estimado en el modelo múltiple podría ser más amplia e incluso afectar su signo o significancia estadística.
+
+# Ejercicio 3. Selección de variables y esperanza de vida
+
+### Caso de estudio 
+
+Un estudio desea construir un modelo que permita predecir la esperanza de vida media de los habitantes de los 50 estados de Estados Unidos en función de distintas variables explicativas.
+
+
+El archivo esperanza.txt contiene información sobre las siguientes variables:
+
+* esp_vida ($Y$): Esperanza de vida media (variable respuesta).
+* habitantes ($X_1$): Número de habitantes.  
+* analfabetismo ($X_2$): Porcentaje de la población con analfabetismo.  
+* ingresos ($X_3$): Renta per cápita, expresada en dólares.  
+* asesinatos ($X_4$): Tasa de homicidios por cada 100 000 habitantes.  
+* universitarios ($X_5$): Porcentaje de graduados universitarios.  
+* heladas ($X_6$): Número promedio de días con temperatura mínima bajo el umbral   considerado.  
+* area ($X_7$): Superficie del estado, medida en millas cuadradas. 
+
+Considere como variable respuesta la esperanza de vida media y utilice un nivel de significancia de $\alpha = 0.01$ en todos los procedimientos de selección. 
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+esperanza <- read.csv("esperanza.txt", sep = "\t", header = TRUE)
+```
+
+
+## Pregunta 3(a). Análisis exploratorio de datos
+
+### Datos y resultados del EDA
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+habitantes <- esperanza$habitantes
+ingresos <- esperanza$ingresos
+analfabetismo <- esperanza$analfabetismo
+esp_vida <- esperanza$esp_vida
+asesinatos <- esperanza$asesinatos
+universitarios <- esperanza$universitarios
+heladas <- esperanza$heladas
+area <- esperanza$area
+
+tabla_resumen <- data.frame(
+  Variable = names(esperanza),
+  Minimo = sapply(esperanza, min),
+  Q1 = sapply(esperanza, function(x) quantile(x, 0.25)),
+  Mediana = sapply(esperanza, median),
+  Media = sapply(esperanza, mean),
+  Q3 = sapply(esperanza, function(x) quantile(x, 0.75)),
+  Maximo = sapply(esperanza, max),
+  row.names = NULL
+)
+
+tabla_resumen[, -1] <- round(tabla_resumen[, -1], 2)
+
+kable(
+  tabla_resumen,
+  caption = "Resumen descriptivo de las variables"
+)
+
+estructura <- data.frame(
+  Variable = names(esperanza),
+  Tipo = sapply(esperanza, class),
+  Observaciones = sapply(esperanza, length),
+  row.names = NULL
+)
+
+kable(
+  estructura,
+  caption = "Estructura de la base de datos"
+)
+
+faltantes <- data.frame(
+  Variable = names(esperanza),
+  Valores_Faltantes = colSums(is.na(esperanza)),
+  row.names = NULL
+)
+
+kable(
+  faltantes,
+  caption = "Valores faltantes por variable"
+)
+```
+### Interpretación del EDA
+
+La base de datos llamada esperanza contiene 45 observaciones, no las 50 correspondientes a los estados de Estados Unidos mencionadas en el enunciado, y 8 variables: habitantes (número de habitantes del estado), ingresos (renta per cápita, en dólares), analfabetismo (porcentaje de la población analfabeta), esp_vida (esperanza de vida media, en años), asesinatos (tasa de homicidios por cada 100 000 habitantes), universitarios (porcentaje de graduados universitarios), heladas (número promedio de días con temperatura mínima bajo el umbral considerado) y area (superficie del estado, en millas cuadradas).
+
+En cuanto a los valores faltantes, se verificó que ninguna de las ocho variables presenta datos faltantes (0 valores NA en habitantes, ingresos, analfabetismo, esp_vida, asesinatos, universitarios, heladas y area), por lo que no fue necesario aplicar ningún procedimiento de imputación ni eliminación de observaciones.
+
+En la variable habitantes encontramos que el mínimo es de 22 466, o sea que el estado con menor población tiene 22 466 habitantes, en el primer cuartil el 25% de los estados tiene menos de 23 176 habitantes, la mitad de los estados tiene menos de 24 975 habitantes, el promedio general es de 26 315 habitantes, en el tercer cuartil el 75% de los estados tiene menos de 27 040 habitantes y con máximo de 43 302 habitantes, siendo este el estado más poblado.
+
+En cuanto a la variable ingresos encontramos que el mínimo es de 3278 dólares, o sea que el ingreso per cápita más bajo registrado es de 3278 dólares, en el primer cuartil el 25% de los estados tiene un ingreso menor a 4087 dólares, la mitad de los estados tiene un ingreso menor a 4648 dólares, el promedio general es de 4592 dólares, en el tercer cuartil el 75% de los estados tiene un ingreso menor de 4989 dólares y con máximo de 6495 dólares, siendo este el estado con mayor renta per cápita.
+
+En cuanto a la variable analfabetismo encontramos que el mínimo es de 0.5%, o sea que el estado con menor tasa de analfabetismo tiene un 0.5% de su población en esa condición, en el primer cuartil el 25% de los estados tiene una tasa menor a 0.6%, la mitad de los estados tiene una tasa menor a 1.0%, el promedio general es de 1.204%, en el tercer cuartil el 75% de los estados tiene una tasa menor de 1.7% y con máximo de 2.8%, siendo este el estado con mayor tasa de analfabetismo.
+
+En cuanto a la variable esp_vida, nuestra variable respuesta, encontramos que el mínimo es de 67.96 años, o sea que el estado con menor esperanza de vida registra 67.96 años, en el primer cuartil el 25% de los estados tiene una esperanza de vida menor a 70.10 años, la mitad de los estados tiene una esperanza de vida menor a 70.66 años, el promedio general es de 70.85 años, en el tercer cuartil el 75% de los estados tiene una esperanza de vida menor de 71.90 años y con máximo de 73.60 años, siendo este el estado con mayor esperanza de vida.
+
+En cuanto a la variable asesinatos encontramos que el mínimo es de 1.4 (por cada 100 000 habitantes), o sea que el estado más seguro registra una tasa de 1.4 homicidios, en el primer cuartil el 25% de los estados tiene una tasa menor a 4.2, la mitad de los estados tiene una tasa menor a 7.1, el promedio general es de 7.471, en el tercer cuartil el 75% de los estados tiene una tasa menor de 10.9 y con máximo de 15.1, siendo este el estado con mayor tasa de homicidios.
+
+En cuanto a la variable universitarios encontramos que el mínimo es de 37.8%, o sea que el estado con menor proporción de graduados universitarios tiene un 37.8%, en el primer cuartil el 25% de los estados tiene una proporción menor a 47.4%, la mitad de los estados tiene una proporción menor a 53.3%, el promedio general es de 52.7%, en el tercer cuartil el 75% de los estados tiene una proporción menor de 59.0% y con máximo de 67.3%, siendo este el estado con mayor proporción de graduados universitarios.
+
+En cuanto a la variable heladas encontramos que el mínimo es de 56 días, o sea que el estado con clima más templado registra 56 días de heladas al año, en el primer cuartil el 25% de los estados tiene menos de 126 días de heladas, la mitad de los estados tiene menos de 178 días, el promedio general es de 171.2 días, en el tercer cuartil el 75% de los estados tiene menos de 211 días y con máximo de 265 días, siendo este el estado con más días de heladas al año.
+
+Finalmente, en la variable area encontramos que el mínimo es de 1049 millas cuadradas, o sea que el estado más pequeño en superficie tiene 1049 millas cuadradas, en el primer cuartil el 25% de los estados tiene una superficie menor a 36 097 millas cuadradas, la mitad de los estados tiene una superficie menor a 54 090 millas cuadradas, el promedio general es de 71 523 millas cuadradas, en el tercer cuartil el 75% de los estados tiene una superficie menor de 79 289 millas cuadradas y con máximo de 566 432 millas cuadradas, siendo este el estado de mayor extensión territorial, muy por encima del resto.
+
+En resumen, los datos confirman una variabilidad moderada en la esperanza de vida entre estados (entre 67.96 y 73.60 años), mientras que predictores como asesinatos, ingresos y heladas presentan una dispersión considerable. Además, se observa que la media de area (71 523) supera ampliamente a su mediana (54 090) y que su máximo se aleja mucho del tercer cuartil, lo que sugiere la presencia de al menos un estado con una extensión territorial atípicamente grande respecto al resto, situación que deberá revisarse más adelante al evaluar puntos de alto apalancamiento en el modelo de regresión.
+
+
+La variable esp_vida es la variable dependiente (respuesta), ya que es la que queremos explicar o predecir. Las variables habitantes, ingresos, analfabetismo, asesinatos, universitarios, heladas y area son las variables explicativas, pues corresponden a factores demográficos y socioeconómicos que podrían influir sobre la esperanza de vida.
+
+A continuación, se presenta la matriz de correlaciones y gráficos exploratorios para observar la asociación entre la esperanza de vida y cada uno de los predictores.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+offset_y <- diff(range(esperanza$esp_vida)) * 0.05
+
+# Gráfico (6): asesinatos vs esperanza de vida
+ggplot(esperanza, aes(asesinatos, esp_vida)) +
+  geom_point(color = "#1F77B4", size = 2.3, alpha = 0.8) +
+  geom_smooth(method = "lm", se = FALSE, color = "#FF7F0E", linewidth = 1) +
+  annotate("text", x = max(esperanza$asesinatos)*0.95,
+           y = min(esperanza$esp_vida) + offset_y,
+           label = "(7)", color = "gray30", size = 6, fontface = "bold") +
+  labs(title = "Esperanza de vida vs tasa de asesinatos",
+       x = "Asesinatos (por 100.000 hab.)", y = "Esperanza de vida") +
+  theme_minimal(base_size = 13)
+
+# Gráfico (7): analfabetismo vs esperanza de vida
+ggplot(esperanza, aes(analfabetismo, esp_vida)) +
+  geom_point(color = "#1F77B4", size = 2.3, alpha = 0.8) +
+  geom_smooth(method = "lm", se = FALSE, color = "#FF7F0E", linewidth = 1) +
+  annotate("text", x = max(esperanza$analfabetismo)*0.95,
+           y = min(esperanza$esp_vida) + offset_y,
+           label = "(8)", color = "gray30", size = 5, fontface = "bold") +
+  labs(title = "Esperanza de vida vs analfabetismo",
+       x = "Analfabetismo (%)", y = "Esperanza de vida") +
+  theme_minimal(base_size = 13)
+
+# Gráfico (8): universitarios vs esperanza de vida
+ggplot(esperanza, aes(universitarios, esp_vida)) +
+  geom_point(color = "#1F77B4", size = 2.3, alpha = 0.85) +
+  geom_smooth(method = "lm", se = FALSE, color = "#FF7F0E", linewidth = 1) +
+  annotate("text", x = max(esperanza$universitarios)*0.95,
+           y = min(esperanza$esp_vida) + offset_y,
+           label = "(9)", color = "gray30", size = 5, fontface = "bold") +
+  labs(title = "Esperanza de vida vs % universitarios",
+       x = "Universitarios (%)", y = "Esperanza de vida") +
+  theme_minimal(base_size = 13)
+
+# Gráfico (9): ingresos vs esperanza de vida
+ggplot(esperanza, aes(ingresos, esp_vida)) +
+  geom_point(color = "#1F77B4", size = 2.3, alpha = 0.85) +
+  geom_smooth(method = "lm", se = FALSE, color = "#FF7F0E", linewidth = 1) +
+  annotate("text", x = max(esperanza$ingresos)*0.95,
+           y = min(esperanza$esp_vida) + offset_y,
+           label = "(10)", color = "gray30", size = 5, fontface = "bold") +
+  labs(title = "Esperanza de vida vs ingresos",
+       x = "Ingresos per cápita (USD)", y = "Esperanza de vida") +
+  theme_minimal(base_size = 13)
+
+# Gráfico (10): heladas vs esperanza de vida
+ggplot(esperanza, aes(heladas, esp_vida)) +
+  geom_point(color = "#1F77B4", size = 2.3, alpha = 0.85) +
+  geom_smooth(method = "lm", se = FALSE, color = "#FF7F0E", linewidth = 1) +
+  annotate("text", x = max(esperanza$heladas)*0.95,
+           y = min(esperanza$esp_vida) + offset_y,
+           label = "(11)", color = "gray30", size = 5, fontface = "bold") +
+  labs(title = "Esperanza de vida vs días de heladas",
+       x = "Heladas (días promedio)", y = "Esperanza de vida") +
+  theme_minimal(base_size = 13)
+
+# Gráfico (11): habitantes vs esperanza de vida
+ggplot(esperanza, aes(habitantes, esp_vida)) +
+  geom_point(color = "#1F77B4", size = 2.3, alpha = 0.85) +
+  geom_smooth(method = "lm", se = FALSE, color = "#FF7F0E", linewidth = 1) +
+  annotate("text", x = max(esperanza$habitantes)*0.95,
+           y = min(esperanza$esp_vida) + offset_y,
+           label = "(12)", color = "gray30", size = 5, fontface = "bold") +
+  labs(title = "Esperanza de vida vs número de habitantes",
+       x = "Habitantes", y = "Esperanza de vida") +
+  theme_minimal(base_size = 13)
+
+# Gráfico (12): area vs esperanza de vida
+ggplot(esperanza, aes(area, esp_vida)) +
+  geom_point(color = "#1F77B4", size = 2.3, alpha = 0.85) +
+  geom_smooth(method = "lm", se = FALSE, color = "#FF7F0E", linewidth = 1) +
+  annotate("text", x = max(esperanza$area)*0.95,
+           y = min(esperanza$esp_vida) + offset_y,
+           label = "(13)", color = "gray30", size = 5, fontface = "bold") +
+  labs(title = "Esperanza de vida vs superficie del estado",
+       x = "Área (millas cuadradas)", y = "Esperanza de vida") +
+  theme_minimal(base_size = 13)
+
+# Matriz de correlaciones
+matriz_cor <- cor(esperanza)
+
+library(reshape2)
+cor_melt <- melt(matriz_cor)
+
+ggplot(cor_melt, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(value, 2)), color = "black", size = 3.5) +
+  scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B",
+                        midpoint = 0, limit = c(-1, 1)) +
+  theme_minimal(base_size = 13) +
+  labs(title = "Matriz de correlaciones", x = "", y = "", fill = "Cor") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+En el gráfico (7) se observa una tendencia negativa clara entre la tasa de asesinatos y la esperanza de vida: a mayor tasa de homicidios, menor esperanza de vida. Los puntos se ajustan de forma consistente a la recta de tendencia, sin observaciones que se aparten drásticamente del patrón general.
+
+En el gráfico (8) también se observa una tendencia negativa entre el analfabetismo y la esperanza de vida, aunque con mayor dispersión de los puntos alrededor de la recta que en el caso de asesinatos. Se aprecia un punto (analfabetismo cercano a 1.8, esperanza de vida sobre 73.5) que se aleja del patrón general del resto de las observaciones.
+
+En el gráfico (9) se observa una tendencia positiva moderada entre el porcentaje de universitarios y la esperanza de vida, con mayor dispersión en los extremos del rango: entre los estados con más de 60% de universitarios coexisten tanto el punto de mayor esperanza de vida del conjunto de datos como dos puntos con esperanzas de vida notoriamente bajas (cercanas a 69 años).
+
+En el gráfico (10) se observa una tendencia positiva moderada entre los ingresos per cápita y la esperanza de vida, consistente con la correlación de 0.35 calculada anteriormente. Sin embargo, la dispersión es considerable: destacan un estado con ingreso bajo (cercano a 3800 USD) y esperanza de vida de solo 68 años, y en el extremo opuesto el estado con mayor ingreso del conjunto, cercano a 6500 USD presenta una esperanza de vida de apenas 69.3 años, por debajo de la recta de tendencia. Estos dos puntos contradicen parcialmente el patrón general y explican por qué la asociación, aunque positiva, es solo moderada.
+
+En el gráfico (11) se observa una tendencia positiva débil entre los días de heladas y la esperanza de vida (r = 0.27), con una dispersión muy amplia en todo el rango de heladas. Llama la atención el estado con menor número de días de heladas (cercano a 55) que presenta, a la vez, la mayor esperanza de vida de todo el conjunto de datos (sobre 73.5 años), lo que va en contra de la leve tendencia positiva de la recta y sugiere que este predictor por sí solo tiene escaso poder explicativo.
+
+En el gráfico (12) la recta de tendencia es prácticamente plana y levemente decreciente, consistente con la correlación casi nula obtenida (r = -0.07). La mayoría de los estados se concentra entre 22 000 y 28 000 habitantes, con una dispersión vertical amplia de la esperanza de vida en ese mismo rango (desde 68 hasta 73.6 años), lo que indica que el número de habitantes no discrimina la esperanza de vida. Los pocos estados con mayor población (34 000, 40 000 y 43 000 habitantes) no se apartan de forma notoria de la tendencia general.
+
+En el gráfico (13) se observa una tendencia negativa débil (r = -0.11), donde la gran mayoría de los estados se concentra en superficies pequeñas (cercanas a 0 en la escala del gráfico), mientras que dos estados se distancian claramente del resto: uno con área cercana a 150 000 millas cuadradas y esperanza de vida de 70.9 años, y el estado de mayor extensión territorial del conjunto (superior a 500 000 millas cuadradas), que registra una esperanza de vida de 69.3 años. Este último corresponde al estado identificado previamente en el EDA como responsable de la fuerte asimetría de la variable area, y es el que principalmente sostiene la leve pendiente negativa de la recta, más que un patrón general presente en el resto de las observaciones.
+
+La matriz de correlaciones confirma y cuantifica lo observado en los gráficos de dispersión. Con respecto a esp_vida, asesinatos presenta la correlación más fuerte de todo el conjunto de predictores (r = -0.79), seguida de universitarios (r = 0.6) y analfabetismo (r = -0.6), ambas con una asociación moderada-alta. Le siguen ingresos (r = 0.35) y heladas (r = 0.27), con asociaciones débiles-moderadas, mientras que area (r = -0.11) y habitantes (r = -0.07) muestran una asociación prácticamente nula con la esperanza de vida.
+
+Un aspecto relevante que revela la matriz es la alta correlación entre algunos de los predictores más prometedores: asesinatos y analfabetismo están correlacionados en 0.71, analfabetismo y universitarios en -0.65, y asesinatos y universitarios en -0.5. Esto sugiere cierta dependencia lineal entre algunos predictores y la posibilidad de colinealidad, que puede afectar la interpretación de los coeficientes cuando se incorporan simultáneamente entre algunos predictores entre estas tres variables, ya que comparten buena parte de la información que explican sobre esp_vida. También destaca la correlación entre heladas y analfabetismo (-0.64) y entre heladas y asesinatos (-0.57).
+
+En conjunto, el análisis exploratorio sugiere que la variable asesinatos presenta una asociación importante con la esperanza de vida. Además, algunas variables explicativas presentan relaciones entre sí, especialmente analfabetismo, universitarios y asesinatos. Por lo tanto, resulta pertinente utilizar procedimientos de selección de variables que permitan evaluar el aporte parcial de cada predictor.
+
+Este patrón es relevante para los procedimientos de selección de variables de los apartados siguientes: es probable que, al incorporar simultáneamente asesinatos, analfabetismo y universitarios en un modelo múltiple, alguna de ellas pierda significancia por compartir información con las otras dos.
+
+## Pregunta 3(b). Selección progresiva (forward)
+
+La selección forward comienza con un modelo que contiene únicamente el intercepto. En cada etapa se evalúa el ingreso de las variables que aún no forman parte del modelo mediante tests F parciales. Se incorpora la variable con mayor aporte significativo, siempre que su p-valor sea inferior a 0.01. El procedimiento finaliza cuando ninguna variable restante cumple este criterio.
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+modelo_nulo <- lm(esp_vida ~ 1, data = esperanza)
+
+modelo_completo <- lm(
+  esp_vida ~ habitantes + ingresos + analfabetismo +
+    asesinatos + universitarios + heladas + area,
+  data = esperanza
+)
+
+tabla1 <- as.data.frame(add1(modelo_nulo, scope = formula(modelo_completo), test = "F"))
+tabla1 <- cbind(Variable = rownames(tabla1), tabla1)
+rownames(tabla1) <- NULL
+kable(tabla1, digits = 4)
+```
+
+### Interpretación del paso 1
+
+El procedimiento forward comienza con un modelo que contiene únicamente el intercepto. En este primer paso se evalúa el ingreso de cada predictor por separado mediante un test F parcial.
+
+La variable asesinatos presenta el menor p-valor, aproximadamente \(1.18\times10^{-10}\), claramente inferior a \(\alpha=0.01\). Por lo tanto, asesinatos debe incorporarse al modelo.
+
+Una vez incorporada esta variable, es necesario evaluar si alguna de las variables restantes aporta información adicional.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+modelo_forward_1 <- lm(esp_vida ~ asesinatos, data = esperanza)
+
+tabla2 <- as.data.frame(add1(modelo_forward_1, scope = formula(modelo_completo), test = "F"))
+tabla2 <- cbind(Variable = rownames(tabla2), tabla2)
+rownames(tabla2) <- NULL
+kable(tabla2, digits = 4)
+```
+
+### Interpretación y modelo final
+
+En la primera etapa, asesinatos presenta el menor p-valor y resulta significativa al 1%, por lo que se incorpora al modelo. Posteriormente, ninguna de las variables restantes cumple el criterio de significancia de \(\alpha=0.01\). Por lo tanto, el modelo final mediante forward selection es \(esp\_vida \sim asesinatos\).
+
+Partiendo del modelo nulo, la primera variable en incorporarse es asesinatos
+(F = 71.06, p = 1.18e-10), muy por debajo del umbral de significancia
+(α = 0.01). Tras incorporarla, ninguna de las variables restantes alcanza
+significancia al 1%: la más cercana es universitarios (p = 0.0109), que
+queda justo fuera del umbral pero habría entrado con un criterio del 5%. El
+resto de las variables (habitantes, heladas, ingresos, area, analfabetismo)
+presentan p-valores considerablemente mayores.
+
+El modelo final obtenido por selección forward es:
+
+$$
+\widehat{\text{esp\_vida}} = 72.98 - 0.285(\text{asesinatos})
+$$
+
+con R² = 0.623 y R² ajustado = 0.614. Es decir, la tasa de asesinatos por sí
+sola explica el 62.3% de la variabilidad observada en la esperanza de vida.
+
+## Pregunta 3(c). Selección regresiva (backward)
+
+La selección backward comienza con el modelo completo, que incluye todos los predictores disponibles. En cada etapa se evalúa el aporte parcial de las variables mediante tests F y se elimina aquella que presenta el mayor p-valor cuando este supera 0.01. El procedimiento continúa hasta que todas las variables restantes resultan significativas al 1%.
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+modelo_completo <- lm(esp_vida ~ habitantes + ingresos + analfabetismo +
+                         asesinatos + universitarios + heladas + area,
+                       data = esperanza)
+s <- summary(modelo_completo)
+
+kable(round(s$coefficients, 4))
+
+kable(data.frame(
+  R2 = round(s$r.squared, 4),
+  R2_ajustado = round(s$adj.r.squared, 4),
+  Error_estandar = round(s$sigma, 4),
+  F = round(s$fstatistic[1], 4),
+  p_valor = format.pval(pf(s$fstatistic[1], s$fstatistic[2], s$fstatistic[3], lower.tail = FALSE), digits = 4)
+), row.names = FALSE)
+
+tabla3 <- as.data.frame(drop1(modelo_completo, test = "F"))
+tabla3 <- cbind(Variable = rownames(tabla3), tabla3)
+rownames(tabla3) <- NULL
+kable(tabla3, digits = 4)
+```
+
+### Interpretación del primer paso
+
+
+Partiendo del modelo completo con los 7 predictores, R² = 0.753 y
+R² ajustado = 0.706. Solo asesinatos resulta significativa (p < 0.001); el
+resto de los coeficientes no son distinguibles de cero, incluyendo casos
+como analfabetismo con signo positivo, contraintuitivo frente a la
+correlación negativa observada en el EDA — un efecto típico cuando hay
+predictores redundantes entre sí compitiendo por la misma variabilidad.
+
+drop1() muestra que ingresos es la variable con mayor p-valor (F = 0.0005,
+p = 0.982), muy por encima del umbral de 0.01, por lo que es la primera en
+eliminarse. En el extremo opuesto, asesinatos concentra la mayor parte de la
+capacidad explicativa del modelo (Sum of Sq = 22.50, muy superior al resto),
+consistente con lo observado en la selección forward.
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+modelo_backward <- update(modelo_completo, . ~ . - ingresos)
+s <- summary(modelo_backward)
+
+kable(round(s$coefficients, 4))
+
+kable(data.frame(
+  R2 = round(s$r.squared, 4),
+  R2_ajustado = round(s$adj.r.squared, 4),
+  Error_estandar = round(s$sigma, 4),
+  F = round(s$fstatistic[1], 4),
+  p_valor = format.pval(pf(s$fstatistic[1], s$fstatistic[2], s$fstatistic[3], lower.tail = FALSE), digits = 4)
+), row.names = FALSE)
+
+tabla4 <- as.data.frame(drop1(modelo_backward, test = "F"))
+tabla4 <- cbind(Variable = rownames(tabla4), tabla4)
+rownames(tabla4) <- NULL
+kable(tabla4, digits = 4)
+```
+
+Después de eliminar la variable ingresos, se ajusta nuevamente el modelo con los seis predictores restantes. El procedimiento drop1() muestra que area presenta el mayor p-valor, aproximadamente \(p=0.881\). Como este valor es superior al nivel de significancia \(\alpha=0.01\), no existe evidencia suficiente para mantener area en el modelo. Por lo tanto, esta variable se elimina en la siguiente etapa del procedimiento backward.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+modelo_backward <- update(modelo_backward, . ~ . - area)
+tabla5 <- as.data.frame(drop1(modelo_backward, test = "F"))
+tabla5 <- cbind(Variable = rownames(tabla5), tabla5)
+rownames(tabla5) <- NULL
+kable(tabla5, digits = 4, caption = "elimina area")
+
+modelo_backward <- update(modelo_backward, . ~ . - analfabetismo)
+tabla6 <- as.data.frame(drop1(modelo_backward, test = "F"))
+tabla6 <- cbind(Variable = rownames(tabla6), tabla6)
+rownames(tabla6) <- NULL
+kable(tabla6, digits = 4, caption = "elimina analfabetismo")
+
+modelo_backward <- update(modelo_backward, . ~ . - habitantes)
+tabla7 <- as.data.frame(drop1(modelo_backward, test = "F"))
+tabla7 <- cbind(Variable = rownames(tabla7), tabla7)
+rownames(tabla7) <- NULL
+kable(tabla7, digits = 4, caption = "elimina habitantes")
+
+modelo_backward <- update(modelo_backward, . ~ . - heladas)
+tabla8 <- as.data.frame(drop1(modelo_backward, test = "F"))
+tabla8 <- cbind(Variable = rownames(tabla8), tabla8)
+rownames(tabla8) <- NULL
+kable(tabla8, digits = 4, caption = "elimina heladas")
+
+modelo_backward <- update(modelo_backward, . ~ . - universitarios)
+tabla9 <- as.data.frame(drop1(modelo_backward, test = "F"))
+tabla9 <- cbind(Variable = rownames(tabla9), tabla9)
+rownames(tabla9) <- NULL
+kable(tabla9, digits = 4, caption = "elimina universitarios")
+
+s <- summary(modelo_backward)
+kable(round(s$coefficients, 4), caption = "Coeficientes del modelo backward final")
+
+kable(data.frame(
+  R2 = round(s$r.squared, 4),
+  R2_ajustado = round(s$adj.r.squared, 4),
+  Error_estandar = round(s$sigma, 4),
+  F = round(s$fstatistic[1], 4),
+  p_valor = format.pval(pf(s$fstatistic[1], s$fstatistic[2], s$fstatistic[3], lower.tail = FALSE), digits = 4)
+), row.names = FALSE, caption = "Ajuste global del modelo backward final")
+```
+
+### Interpretación y modelo final
+
+El proceso backward elimina, en orden: ingresos (p=0.982), area (p=0.881),
+analfabetismo (p=0.893), habitantes (p=0.035), heladas (p=0.014) y
+universitarios (p=0.011), deteniéndose cuando la única variable restante,
+asesinatos, resulta significativa al 1%. El modelo final backward es
+idéntico al obtenido por forward: esp_vida ~ asesinatos (R² = 0.623,
+R² ajustado = 0.614). Este hecho, dos procedimientos que parten de extremos
+opuestos y llegan al mismo resultado muestra consistencia entre ambos procedimientos de selección.
+
+## Pregunta 3(d). Selección stepwise 
+
+La selección stepwise combina los procedimientos forward y backward. Comienza con el modelo nulo y evalúa el ingreso de variables mediante tests F parciales. Después de cada incorporación, revisa si alguna de las variables incluidas dejó de ser significativa y debe eliminarse. El proceso termina cuando no es posible agregar ni retirar variables utilizando el nivel de significancia de 0.01.
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+modelo_stepwise <- lm(esp_vida ~ 1, data = esperanza)
+
+# Paso 1: evaluar ingreso de variables
+tabla10 <- as.data.frame(add1(modelo_stepwise,
+     scope = ~ habitantes + ingresos + analfabetismo + asesinatos +
+               universitarios + heladas + area,
+     test = "F"))
+tabla10 <- cbind(Variable = rownames(tabla10), tabla10)
+rownames(tabla10) <- NULL
+kable(tabla10, digits = 4, caption = "Stepwise desde el modelo nulo")
+```
+### Interpretación 
+
+El primer paso del procedimiento stepwise coincide con el de la selección
+forward: partiendo del modelo nulo, asesinatos es la variable con el
+p-valor más bajo (F = 71.0633, p = 1.177e-10), por lo que se incorpora
+primero.
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+modelo_stepwise <- update(modelo_stepwise, . ~ . + asesinatos)
+
+# Paso 2: revisar si asesinatos sigue siendo significativa, y evaluar nuevo ingreso
+tabla11 <- as.data.frame(drop1(modelo_stepwise, test = "F"))
+tabla11 <- cbind(Variable = rownames(tabla11), tabla11)
+rownames(tabla11) <- NULL
+kable(tabla11, digits = 4, caption = "Stepwise")
+
+tabla12 <- as.data.frame(add1(modelo_stepwise,
+     scope = ~ habitantes + ingresos + analfabetismo + asesinatos +
+               universitarios + heladas + area,
+     test = "F"))
+tabla12 <- cbind(Variable = rownames(tabla12), tabla12)
+rownames(tabla12) <- NULL
+kable(tabla12, digits = 4, caption = "Stepwise")
+```
+
+### Interpretación y modelo final
+
+En el segundo paso, drop1() confirma que asesinatos sigue siendo altamente
+significativa (p = 1.177e-10), por lo que no sale del modelo. add1() no
+encuentra ninguna variable candidata con p < 0.01: las más cercanas son
+universitarios (p = 0.0109) y habitantes (p = 0.0114), ambas justo por
+encima del umbral, tal como se había observado en la selección forward. Al
+no poder agregar ni eliminar variables, el algoritmo se detiene.
+
+El modelo final obtenido por selección stepwise es:
+
+$$
+\widehat{\text{esp\_vida}} = 72.98 - 0.285(\text{asesinatos})
+$$
+
+El modelo obtenido mediante selección stepwise coincide con los encontrados previamente mediante forward y backward. A pesar de utilizar estrategias de selección diferentes, los tres procedimientos conducen a la misma especificación final. Por lo tanto, esp_vida ~ asesinatos presenta una elección consistente entre los métodos aplicados.
+
+## Pregunta 3(e). Comparación y selección del modelo
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+modelo_completo <- lm(
+  esp_vida ~ habitantes + ingresos + analfabetismo +
+    asesinatos + universitarios + heladas + area,
+  data = esperanza
+)
+
+modelo_final <- lm(
+  esp_vida ~ asesinatos,
+  data = esperanza
+)
+
+Cp <- function(modelo_candidato, modelo_completo) {
+  n <- nobs(modelo_candidato)
+  p <- length(coef(modelo_candidato))
+  sigma2_completo <- deviance(modelo_completo) / df.residual(modelo_completo)
+  
+  deviance(modelo_candidato) / sigma2_completo - n + 2 * p
+}
+
+r2_aj <- summary(modelo_final)$adj.r.squared
+cp <- Cp(modelo_final, modelo_completo)
+aic <- AIC(modelo_final)
+bic <- BIC(modelo_final)
+
+comparacion_modelos <- data.frame(
+  Modelo = c("Forward", "Backward", "Stepwise"),
+  R2_ajustado = rep(r2_aj, 3),
+  Cp = rep(cp, 3),
+  AIC = rep(aic, 3),
+  BIC = rep(bic, 3)
+)
+
+knitr::kable(
+  comparacion_modelos,
+  digits = 4,
+  caption = "Comparación de los modelos obtenidos mediante selección de variables"
+)
+
+```
+
+### Interpretación de los criterios
+
+Los procedimientos forward, backward y stepwise condujeron al mismo modelo final, compuesto únicamente por la variable asesinatos. Por esta razón, los tres procedimientos presentan los mismos valores de \(R^2\) ajustado, Cp de Mallows, AIC y BIC.
+
+El \(R^2\) ajustado es 0.6142, lo que indica que el modelo explica aproximadamente el 61.42% de la variabilidad observada en la esperanza de vida, considerando la cantidad de predictores incluidos. Para este indicador se prefieren valores mayores.
+
+El Cp de Mallows es 15.361, el AIC es 119.0703 y el BIC es 124.4903. En estos indicadores se prefieren valores menores cuando se comparan modelos diferentes. Sin embargo, como los tres procedimientos produjeron exactamente el mismo modelo, los indicadores no permiten establecer una diferencia entre forward, backward y stepwise.
+
+Se selecciona el modelo esp_vida ~ asesinatos porque los tres procedimientos coinciden en la misma especificación, asesinatos cumple el criterio de significancia del 1% y el modelo conserva una estructura parsimoniosa e interpretable.
+
+Por lo tanto, el modelo seleccionado es:
+
+$$
+esp\_vida \sim asesinatos
+$$
+
+y su expresión estimada es:
+
+$$
+\widehat{esp\_vida}
+=
+72.9833 - 0.2851\,asesinatos
+$$
+
+El coeficiente estimado para asesinatos es negativo. Esto indica que, para los datos analizados, un aumento de una unidad en la tasa de asesinatos por cada 100.000 habitantes se asocia, en promedio, con una disminución aproximada de 0.285 años en la esperanza de vida.
+
+La coincidencia entre los tres procedimientos muestra consistencia en la selección del modelo. A partir de los resultados obtenidos, asesinatos es la única variable que permanece en el modelo bajo el criterio de significancia del 1%. Esta relación debe interpretarse como una asociación estadística y no como una relación causal.
+
+
+### Comparación entre R y Python
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# Resultados obtenidos en Python
+r2_aj_python <- 0.614249
+cp_python <- 15.360953
+aic_python <- 117.070285
+bic_python <- 120.683610
+
+# Tabla comparativa
+comparacion_lenguajes <- data.frame(
+  Lenguaje = c("R", "Python"),
+  Modelo = c(
+    "esp_vida ~ asesinatos",
+    "esp_vida ~ asesinatos"
+  ),
+  R2_ajustado = c(
+    r2_aj,
+    r2_aj_python
+  ),
+  Cp = c(
+    cp,
+    cp_python
+  ),
+  AIC = c(
+    aic,
+    aic_python
+  ),
+  BIC = c(
+    bic,
+    bic_python
+  )
+)
+
+knitr::kable(
+  comparacion_lenguajes,
+  digits = 4,
+  row.names = FALSE,
+  caption = "Comparación del modelo seleccionado en R y Python",
+  align = c("l", "l", "c", "c", "c", "c")
+)
+
+```
+
+La selección mediante forward, backward y stepwise determinó el modelo \(\text{esp\_vida}\sim\text{asesinatos}\) en R y Python, con un \(R^2\) ajustado de \(0.6142\) y un \(C_p\) de Mallows de \(15.3610\). Los criterios de información registraron un AIC de \(119.0703\) y un BIC de \(124.4903\) en R, frente a un AIC de \(117.0703\) y un BIC de \(120.6836\) en Python. Esta diferencia responde al número de parámetros incluido en cada implementación: la estimación de la varianza residual en R y los coeficientes de regresión en statsmodels. Las convenciones de cálculo mantienen la selección del modelo, las estimaciones de los coeficientes y su interpretación.
+
+
+
+
