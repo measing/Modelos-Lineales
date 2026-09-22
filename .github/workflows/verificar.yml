@@ -29,3 +29,33 @@ jobs:
           name: informes-laboratorio
           path: resultados/
           if-no-files-found: error
+      - name: Construir la página del laboratorio
+        run: >-
+          docker run --rm
+          -v "$GITHUB_WORKSPACE:/workspaces/modelos-lineales"
+          -w /workspaces/modelos-lineales
+          modelos-lineales
+          .venv/bin/python scripts/construir_web.py
+      - name: Preparar publicación web
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  publicar:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: laboratorio
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

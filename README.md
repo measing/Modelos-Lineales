@@ -5,6 +5,16 @@ Los tres archivos de datos estan incluidos en este repositorio.
 
 Trabajo de laboratorio 1 de la asignatura de Modelos Lineales.
 
+## Ver el trabajo en la web
+
+**[Abrir la página del laboratorio](https://measing.github.io/Modelos-Lineales/)**
+
+No requiere cuenta ni instalaciones. Incluye pestañas de **Python**, **R** y **Datos**:
+códigos, resultados, gráficos, las tres bases completas y descargas del notebook,
+documento R Markdown e informe PDF. Los resultados ya están calculados.
+
+Para modificar o ejecutar los análisis, usa Codespaces:
+
 [![Abrir en GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/measing/Modelos-Lineales)
 
 ## Abrir y ejecutar en GitHub Codespaces
@@ -57,6 +67,10 @@ No es necesario subir datos manualmente. Conserva estos archivos junto al notebo
 y al documento R Markdown.
 
 ## Entorno
+
+La web se actualiza desde GitHub Actions después de ejecutar correctamente R y Python.
+Su código está en `web/`; `scripts/construir_web.py` reúne los informes y los datos
+en `_site/` y verifica que estén incluidos los gráficos antes de publicar.
 
 La configuracion de `.devcontainer/` instala Python 3.11, R, Pandoc y XeLaTeX.
 Las versiones de las dependencias directas de Python estan en `requirements.txt`;

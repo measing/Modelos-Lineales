@@ -6,6 +6,7 @@ __pycache__/
 .RData
 .Rproj.user/
 resultados/
+_site/
 *.knit.md
 *.utf8.md
 *_files/
